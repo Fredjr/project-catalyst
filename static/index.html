@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sci-Agent</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body class="h-screen flex">
+    <!-- Sidebar -->
+    <aside class="w-full lg:w-1/4 xl:w-1/5 bg-white border-r border-gray-200 flex flex-col">
+        <!-- Header -->
+        <div class="p-4 flex items-center space-x-3">
+            <div class="bg-indigo-600 w-10 h-10 rounded-lg flex items-center justify-center">
+                <i class="fas fa-flask-vial text-white text-xl"></i>
+            </div>
+            <h1 class="text-xl font-semibold">Sci-Agent</h1>
+        </div>
+
+        <!-- Search Bar -->
+        <div class="p-4">
+            <div class="flex">
+                <input type="text" id="search-input" 
+                       class="flex-1 border-l border-y border-gray-300 rounded-l-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" 
+                       placeholder="Search molecule...">
+                <button id="search-button" 
+                        class="bg-indigo-600 text-white px-4 rounded-r-lg hover:bg-indigo-700">
+                    <i class="fas fa-search"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Navigation & Actions -->
+        <nav id="nav-panel" class="hidden flex-1 p-4">
+            <div class="space-y-2">
+                <button data-target="news-block" class="w-full text-left px-4 py-2 rounded-lg hover:bg-indigo-50">
+                    <i class="fas fa-newspaper w-6"></i> Scientific News
+                </button>
+                <button data-target="rd-block" class="w-full text-left px-4 py-2 rounded-lg hover:bg-indigo-50">
+                    <i class="fas fa-flask w-6"></i> Clinical Trials
+                </button>
+                <button data-target="hypotheses-block" class="w-full text-left px-4 py-2 rounded-lg hover:bg-indigo-50">
+                    <i class="fas fa-lightbulb w-6"></i> Hypotheses
+                </button>
+                <button data-target="patents-block" class="w-full text-left px-4 py-2 rounded-lg hover:bg-indigo-50">
+                    <i class="fas fa-scroll w-6"></i> Patents
+                </button>
+                <button data-target="questions-block" class="w-full text-left px-4 py-2 rounded-lg hover:bg-indigo-50">
+                    <i class="fas fa-question-circle w-6"></i> Questions
+                </button>
+            </div>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 bg-gray-50 p-6 overflow-y-auto">
+        <!-- Welcome Screen -->
+        <div id="welcome-screen" class="h-full flex flex-col items-center justify-center text-gray-500">
+            <i class="fas fa-microscope text-6xl mb-4"></i>
+            <p class="text-xl">Search for a molecule to begin</p>
+        </div>
+
+        <!-- Loading Spinner -->
+        <div id="loading-spinner" class="hidden h-full flex items-center justify-center">
+            <div class="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-indigo-600"></div>
+        </div>
+
+        <!-- Error Message Container -->
+        <div id="error-container" class="hidden bg-red-50 border-l-4 border-red-400 p-4 rounded-r mb-4" role="alert">
+            <div id="error-message" class="text-red-700"></div>
+        </div>
+
+        <!-- Results Container -->
+        <div id="results-container" class="hidden space-y-6">
+            <!-- Identity Block -->
+            <div id="identity-block" class="bg-white rounded-lg border shadow-md p-6">
+                <div class="flex flex-col md:flex-row gap-6">
+                    <div class="flex-1">
+                        <h2 class="text-2xl font-semibold"><span id="common-name"></span></h2>
+                        <p class="text-gray-600 mt-2"><span id="iupac-name"></span></p>
+                        <div class="mt-4 inline-block bg-indigo-50 text-indigo-700 px-3 py-1 rounded-full text-sm"><span id="pharmacological-family"></span></div>
+                    </div>
+                    <div class="w-full md:w-1/3 border rounded-lg p-4" id="structure-svg"></div>
+                </div>
+            </div>
+
+            <!-- Therapeutic Profile -->
+            <div id="therapeutic-block" class="bg-white rounded-lg border shadow-md p-6">
+                <h3 class="text-xl font-semibold mb-4">Therapeutic Profile</h3>
+                <div class="space-y-4">
+                    <div>
+                        <h4 class="font-medium text-gray-700">Indications</h4>
+                        <p class="mt-1 text-gray-600"><span id="indications"></span></p>
+                    </div>
+                    <div>
+                        <h4 class="font-medium text-gray-700">Conditions</h4>
+                        <p class="mt-1 text-gray-600"><span id="conditions"></span></p>
+                    </div>
+                    <div>
+                        <div class="flex items-center justify-between">
+                            <h4 class="font-medium text-gray-700">Mechanism of Action</h4>
+                            <label class="flex items-center cursor-pointer">
+                                <span class="mr-2 text-sm text-gray-600">Expert View</span>
+                                <div class="relative">
+                                    <input type="checkbox" id="expert-toggle" class="sr-only">
+                                    <div class="w-10 h-5 bg-gray-200 rounded-full"></div>
+                                    <div class="dot absolute left-0 top-0 bg-white w-5 h-5 rounded-full transition"></div>
+                                </div>
+                            </label>
+                        </div>
+                        <p class="mt-1 text-gray-600"><span id="mechanism-simple"></span></p>
+                        <p class="hidden mt-1 text-gray-600"><span id="mechanism-expert"></span></p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Scientific News -->
+            <div id="news-block" class="hidden bg-white rounded-lg border shadow-md p-6">
+                <h3 class="text-xl font-semibold mb-4">Scientific News</h3>
+                <div class="bg-indigo-50 rounded-lg p-4 mb-4">
+                    <h4 class="font-medium text-indigo-900 mb-2">AI Synthesis</h4>
+                    <p id="news-synthesis" class="text-indigo-700"></p>
+                </div>
+                <div id="articles-list" class="space-y-4"></div>
+            </div>
+
+            <!-- Clinical Trials -->
+            <div id="rd-block" class="hidden bg-white rounded-lg border shadow-md p-6">
+                <h3 class="text-xl font-semibold mb-4">Clinical Trials</h3>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phase</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pathology</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sponsor</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Link</th>
+                            </tr>
+                        </thead>
+                        <tbody id="trials-table" class="bg-white divide-y divide-gray-200"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Exploratory Hypotheses -->
+            <div id="hypotheses-block" class="hidden bg-white rounded-lg border shadow-md p-6">
+                <h3 class="text-xl font-semibold mb-4">Exploratory Hypotheses</h3>
+                <div id="hypotheses-list" class="space-y-4"></div>
+            </div>
+
+            <!-- Patents & Competition -->
+            <div id="patents-block" class="hidden bg-white rounded-lg border shadow-md p-6">
+                <h3 class="text-xl font-semibold mb-4">Patents & Competition</h3>
+                <p id="patents-summary" class="text-gray-600"></p>
+            </div>
+
+            <!-- Follow-up Questions -->
+            <div id="questions-block" class="hidden bg-white rounded-lg border shadow-md p-6">
+                <h3 class="text-xl font-semibold mb-4">Follow-up Questions</h3>
+                <div id="questions-grid" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // DOM Elements
+        const searchInput = document.getElementById('search-input');
+        const searchButton = document.getElementById('search-button');
+        const welcomeScreen = document.getElementById('welcome-screen');
+        const loadingSpinner = document.getElementById('loading-spinner');
+        const resultsContainer = document.getElementById('results-container');
+        const navPanel = document.getElementById('nav-panel');
+        const expertToggle = document.getElementById('expert-toggle');
+        const errorContainer = document.getElementById('error-container');
+        const errorText = document.getElementById('error-message');
+
+        // Event Listeners
+        searchButton.addEventListener('click', () => {
+            const query = searchInput.value.trim();
+            if (query) {
+                fetchMoleculeData(query);
+            }
+        });
+
+        searchInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                const query = searchInput.value.trim();
+                if (query) {
+                    fetchMoleculeData(query);
+                }
+            }
+        });
+
+        // Navigation buttons
+        document.querySelectorAll('nav button').forEach(button => {
+            button.addEventListener('click', (e) => {
+                const targetId = e.currentTarget.dataset.target;
+                const targetElement = document.getElementById(targetId);
+                
+                // Toggle active state of button
+                e.currentTarget.classList.toggle('bg-indigo-100');
+                e.currentTarget.classList.toggle('font-medium');
+                
+                // Toggle visibility of target element
+                targetElement.classList.toggle('hidden');
+            });
+        });
+
+        // Expert toggle
+        expertToggle.addEventListener('change', () => {
+            document.getElementById('mechanism-simple').classList.toggle('hidden');
+            document.getElementById('mechanism-expert').classList.toggle('hidden');
+        });
+
+        // Fetch molecule data from API
+        async function fetchMoleculeData(molecule) {
+            // Show loading state
+            welcomeScreen.classList.add('hidden');
+            resultsContainer.classList.add('hidden');
+            loadingSpinner.classList.remove('hidden');
+            errorContainer.classList.add('hidden');
+            navPanel.classList.add('hidden');
+
+            // Reset content and show loading state
+            document.getElementById('common-name').textContent = 'Loading...';
+            document.getElementById('iupac-name').textContent = 'Loading...';
+            document.getElementById('pharmacological-family').textContent = 'Loading...';
+            document.getElementById('mechanism-simple').textContent = 'Loading...';
+            document.getElementById('mechanism-expert').textContent = 'Loading...';
+            document.getElementById('indications').textContent = 'Loading...';
+            document.getElementById('conditions').textContent = 'Loading...';
+            document.getElementById('structure-svg').innerHTML = '<div class="animate-pulse">Loading...</div>';
+
+            try {
+                const response = await fetch(`/api/synthesis?molecule=${encodeURIComponent(molecule)}`);
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail);
+                }
+                const data = await response.json();
+
+                // Update UI with real data
+                document.getElementById('common-name').textContent = data.identity.commonName;
+                document.getElementById('iupac-name').textContent = data.identity.iupacName;
+                document.getElementById('pharmacological-family').textContent = data.identity.pharmacologicalFamily;
+                
+                // Update mechanism of action with simple/expert views
+                document.getElementById('mechanism-simple').textContent = data.therapeutic.mechanismSimple;
+                document.getElementById('mechanism-expert').textContent = data.therapeutic.mechanismExpert;
+                
+                // Update other therapeutic info
+                document.getElementById('indications').textContent = data.therapeutic.indications;
+                document.getElementById('conditions').textContent = data.therapeutic.conditions;
+                
+                // Update structure SVG if available
+                document.getElementById('structure-svg').innerHTML = data.identity.structureSVG;
+                
+                // Hide loading state and show results
+                loadingSpinner.classList.add('hidden');
+                resultsContainer.classList.remove('hidden');
+                navPanel.classList.remove('hidden');
+                
+                // Populate other sections with sample data
+                populateOtherSections();
+
+            } catch (error) {
+                // Format and display error message with suggestions
+                const errorMessage = error.message.split('\n');
+                const formattedError = errorMessage.map(line => {
+                    if (line.startsWith('- ')) {
+                        return `<li class="ml-4 mt-1 text-red-600">${line.substring(2)}</li>`;
+                    }
+                    if (line.startsWith('Suggestions:')) {
+                        return `<p class="font-semibold mt-3 mb-2">${line}</p><ul class="list-disc">`;
+                    }
+                    if (line.includes('not found')) {
+                        return `<p class="font-medium text-red-700">${line}</p>`;
+                    }
+                    return `<p class="text-red-600">${line}</p>${line.includes('Suggestions:') ? '' : ''}`;
+                }).join('');
+                
+                // Show formatted error message
+                document.getElementById('error-message').innerHTML = formattedError;
+                document.getElementById('error-container').classList.remove('hidden');
+                
+                // Hide loading state and results
+                loadingSpinner.classList.add('hidden');
+                resultsContainer.classList.add('hidden');
+                navPanel.classList.add('hidden');
+                console.error('Error fetching molecule data:', error);
+            }
+        }
+
+        // Sample data for other sections that aren't connected to the API yet
+        const sampleData = {
+            identity: {
+                commonName: "Ibuprofen",
+                iupacName: "(RS)-2-(4-(2-methylpropyl)phenyl)propanoic acid",
+                pharmacologicalFamily: "Non-Steroidal Anti-Inflammatory Drug (NSAID)",
+                structureSVG: `<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200">
+                    <circle cx="100" cy="100" r="80" fill="none" stroke="#4F46E5" stroke-width="2"/>
+                    <text x="50%" y="50%" text-anchor="middle" dy=".3em" font-size="14">Ibuprofen</text>
+                </svg>`
+            },
+            therapeutic: {
+                indications: "Pain relief, fever reduction, and inflammation treatment",
+                conditions: "Rheumatoid arthritis, osteoarthritis, primary dysmenorrhea, and other acute or chronic pain conditions",
+                mechanismSimple: "It works by blocking the production of substances that cause pain and inflammation in the body",
+                mechanismExpert: "Reversibly inhibits cyclooxygenase-1 and cyclooxygenase-2 (COX-1 and COX-2) enzymes, thereby preventing the synthesis of prostaglandins and thromboxane compounds from arachidonic acid"
+            },
+            news: {
+                synthesis: "Recent studies highlight Ibuprofen's potential role in treating inflammatory conditions beyond its traditional use. New research suggests possible applications in neurological disorders.",
+                articles: [
+                    {
+                        title: "Novel Applications of Ibuprofen in Neuroinflammation",
+                        authors: "Smith J., et al.",
+                        journal: "Journal of Neuroinflammation",
+                        year: 2024
+                    },
+                    {
+                        title: "Long-term Safety Profile Review of Ibuprofen",
+                        authors: "Johnson M., et al.",
+                        journal: "Clinical Therapeutics",
+                        year: 2024
+                    },
+                    {
+                        title: "Ibuprofen in COVID-19 Treatment Protocols",
+                        authors: "Chen X., et al.",
+                        journal: "International Journal of Medicine",
+                        year: 2023
+                    }
+                ]
+            },
+            clinicalTrials: [
+                {
+                    phase: "Phase III",
+                    pathology: "Chronic Pain",
+                    status: "Recruiting",
+                    sponsor: "University Medical Center",
+                    link: "#trial1"
+                },
+                {
+                    phase: "Phase IV",
+                    pathology: "Arthritis",
+                    status: "Completed",
+                    sponsor: "PharmaCorp",
+                    link: "#trial2"
+                },
+                {
+                    phase: "Phase II",
+                    pathology: "Neuroinflammation",
+                    status: "Terminated",
+                    sponsor: "BioResearch Inc",
+                    link: "#trial3"
+                }
+            ],
+            hypotheses: [
+                {
+                    text: "Potential neuroprotective effects in early-stage Alzheimer's disease",
+                    source: "AI Analysis of recent literature"
+                },
+                {
+                    text: "Synergistic effects when combined with specific antioxidants",
+                    source: "Clinical observation patterns"
+                }
+            ],
+            patents: {
+                summary: "Multiple patents cover various aspects of Ibuprofen formulation and delivery methods. Key patents include modified release formulations (exp. 2026) and novel combinations with other active ingredients (exp. 2028). Several generic manufacturers hold manufacturing process patents."
+            },
+            questions: [
+                "What are the latest findings on cardiovascular risk profiles?",
+                "How does it compare to newer NSAIDs?",
+                "Are there potential applications in preventive medicine?",
+                "What role does it play in inflammatory cascades?"
+            ]
+        };
+
+
+
+        // Helper function to populate other sections with sample data
+        function populateOtherSections() {
+            populateNewsBlock(sampleData.news);
+            populateTrialsBlock(sampleData.clinicalTrials);
+            populateHypothesesBlock(sampleData.hypotheses);
+            populatePatentsBlock(sampleData.patents);
+            populateQuestionsBlock(sampleData.questions);
+        }
+
+        function populateIdentityBlock(data) {
+            document.getElementById('common-name').textContent = data.commonName;
+            document.getElementById('iupac-name').textContent = data.iupacName;
+            document.getElementById('pharmacological-family').textContent = data.pharmacologicalFamily;
+            document.getElementById('structure-svg').innerHTML = data.structureSVG;
+        }
+
+        function populateTherapeuticBlock(data) {
+            document.getElementById('indications').textContent = data.indications;
+            document.getElementById('conditions').textContent = data.conditions;
+            document.getElementById('mechanism-simple').textContent = data.mechanismSimple;
+            document.getElementById('mechanism-expert').textContent = data.mechanismExpert;
+        }
+
+        function populateNewsBlock(data) {
+            document.getElementById('news-synthesis').textContent = data.synthesis;
+            const articlesList = document.getElementById('articles-list');
+            articlesList.innerHTML = data.articles.map(article => `
+                <div class="border-l-4 border-indigo-500 pl-4">
+                    <h4 class="font-medium">${article.title}</h4>
+                    <p class="text-sm text-gray-600">${article.authors}</p>
+                    <p class="text-sm text-gray-500">${article.journal} (${article.year})</p>
+                </div>
+            `).join('');
+        }
+
+        function populateTrialsBlock(trials) {
+            const statusColors = {
+                'Recruiting': 'bg-green-100 text-green-800',
+                'Completed': 'bg-blue-100 text-blue-800',
+                'Terminated': 'bg-red-100 text-red-800'
+            };
+
+            document.getElementById('trials-table').innerHTML = trials.map(trial => `
+                <tr>
+                    <td class="px-6 py-4 whitespace-nowrap">${trial.phase}</td>
+                    <td class="px-6 py-4">${trial.pathology}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${statusColors[trial.status]}">
+                            ${trial.status}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4">${trial.sponsor}</td>
+                    <td class="px-6 py-4">
+                        <a href="${trial.link}" class="text-indigo-600 hover:text-indigo-900">View</a>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function populateHypothesesBlock(hypotheses) {
+            document.getElementById('hypotheses-list').innerHTML = hypotheses.map(hypothesis => `
+                <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                    <p class="text-gray-800">${hypothesis.text}</p>
+                    <p class="text-sm text-gray-500 mt-2">Source: ${hypothesis.source}</p>
+                </div>
+            `).join('');
+        }
+
+        function populatePatentsBlock(data) {
+            document.getElementById('patents-summary').textContent = data.summary;
+        }
+
+        function populateQuestionsBlock(questions) {
+            document.getElementById('questions-grid').innerHTML = questions.map(question => `
+                <button class="text-left p-4 bg-gray-50 hover:bg-indigo-50 rounded-lg border border-gray-200">
+                    ${question}
+                </button>
+            `).join('');
+        }
+    </script>
+</body>
+</html>

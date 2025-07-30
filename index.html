@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project Catalyst - Investigator Discovery</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f1f5f9; /* slate-100 */
+        }
+        .fade-in {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .spinner {
+            border-top-color: #3b82f6; /* blue-500 */
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        /* Styles for the modal */
+        .modal-overlay {
+            transition: opacity 0.3s ease;
+        }
+        .modal-container {
+            transition: transform 0.3s ease;
+        }
+    </style>
+</head>
+<body class="text-slate-800">
+
+    <!-- Main Container -->
+    <div class="min-h-screen flex flex-col items-center p-4 lg:p-8">
+
+        <!-- Header -->
+        <header class="w-full max-w-5xl mx-auto mb-8">
+            <div class="flex items-center space-x-3">
+                <div class="p-2 bg-blue-600 text-white rounded-lg">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-flask-conical"><path d="M10 2v7.31"/><path d="M14 9.31V2"/><path d="M4 9h16"/><path d="M6 9l-1.18 10.62A2 2 0 0 0 6.8 22h10.4a2 2 0 0 0 1.98-2.38L18 9"/></svg>
+                </div>
+                <h1 class="text-2xl font-bold text-slate-800">Project Catalyst</h1>
+            </div>
+        </header>
+
+        <!-- Search Section -->
+        <main class="w-full max-w-5xl">
+            <div class="bg-white p-6 rounded-xl shadow-md">
+                <h2 class="text-xl font-bold text-slate-900 mb-2">Find Top Investigators</h2>
+                <p class="text-slate-600 mb-4">Enter a therapeutic area, disease, or gene to discover leading researchers.</p>
+                <div class="flex flex-col sm:flex-row gap-4">
+                    <input type="text" id="search-query" placeholder="e.g., KRAS G12C lung cancer" class="flex-grow p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
+                    <button id="search-button" class="bg-blue-600 text-white font-semibold py-3 px-6 rounded-lg shadow-sm hover:bg-blue-700 transition-all flex items-center justify-center space-x-2">
+                        <i data-lucide="search" class="w-5 h-5"></i>
+                        <span>Search</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Results Section -->
+            <div id="results-container" class="mt-8">
+                <!-- Initial State / Placeholder -->
+                <div id="placeholder" class="text-center py-16">
+                    <div class="mx-auto p-4 bg-slate-200 text-slate-500 rounded-full w-fit mb-4">
+                        <i data-lucide="microscope" class="w-10 h-10"></i>
+                    </div>
+                    <h3 class="text-xl font-semibold text-slate-700">Your results will appear here</h3>
+                    <p class="text-slate-500">Start a search to find top investigators.</p>
+                </div>
+
+                <!-- Loading State -->
+                <div id="loading" class="text-center py-16 hidden">
+                    <div class="spinner w-12 h-12 rounded-full border-4 border-slate-200 mx-auto mb-4"></div>
+                    <h3 class="text-xl font-semibold text-slate-700">Analyzing Data...</h3>
+                    <p class="text-slate-500">Discovering candidates and calculating scores. This may take a moment.</p>
+                </div>
+                
+                <!-- Error State -->
+                 <div id="error" class="text-center py-16 hidden">
+                    <div class="mx-auto p-4 bg-red-100 text-red-500 rounded-full w-fit mb-4">
+                        <i data-lucide="alert-triangle" class="w-10 h-10"></i>
+                    </div>
+                    <h3 class="text-xl font-semibold text-red-700">An Error Occurred</h3>
+                    <p id="error-message" class="text-slate-500">Could not fetch results. Please try again later.</p>
+                </div>
+
+                <!-- Results List -->
+                <div id="results-list" class="space-y-4 hidden">
+                    <!-- Investigator cards will be injected here by JS -->
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Details Modal -->
+    <div id="details-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 hidden modal-overlay bg-black bg-opacity-50">
+        <div class="modal-container bg-white w-full max-w-md p-6 rounded-2xl shadow-xl transform scale-95">
+            <div class="flex justify-between items-center mb-4">
+                <h3 id="modal-title" class="text-xl font-bold">Data Source Details</h3>
+                <button id="modal-close-button" class="text-slate-500 hover:text-slate-800">
+                    <i data-lucide="x" class="w-6 h-6"></i>
+                </button>
+            </div>
+            <div id="modal-content" class="text-slate-600">
+                <!-- Modal content will be injected here -->
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        // --- CONFIGURATION ---
+        const API_URL = "http://127.0.0.1:8002/find-investigators/"; // Updated to correct port
+
+        // --- DOM ELEMENTS ---
+        const searchQueryInput = document.getElementById('search-query');
+        const searchButton = document.getElementById('search-button');
+        const placeholder = document.getElementById('placeholder');
+        const loading = document.getElementById('loading');
+        const error = document.getElementById('error');
+        const errorMessage = document.getElementById('error-message');
+        const resultsList = document.getElementById('results-list');
+        const modal = document.getElementById('details-modal');
+        const modalTitle = document.getElementById('modal-title');
+        const modalContent = document.getElementById('modal-content');
+        const modalCloseButton = document.getElementById('modal-close-button');
+
+        // --- GLOBAL STATE ---
+        let currentInvestigators = [];
+
+        // --- EVENT LISTENERS ---
+        searchButton.addEventListener('click', performSearch);
+        searchQueryInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') performSearch();
+        });
+        modalCloseButton.addEventListener('click', hideDetailsModal);
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) hideDetailsModal();
+        });
+
+
+        // --- FUNCTIONS ---
+        async function performSearch() {
+            const query = searchQueryInput.value.trim();
+            if (!query) {
+                alert("Please enter a search query.");
+                return;
+            }
+
+            // UI State: Loading
+            placeholder.classList.add('hidden');
+            error.classList.add('hidden');
+            resultsList.classList.add('hidden');
+            loading.classList.remove('hidden');
+            searchButton.disabled = true;
+            searchButton.classList.add('opacity-50', 'cursor-not-allowed');
+
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query: query }),
+                });
+
+                if (!response.ok) throw new Error(`API Error: ${response.status} ${response.statusText}`);
+                
+                currentInvestigators = await response.json();
+                displayResults(currentInvestigators);
+
+            } catch (err) {
+                // UI State: Error
+                errorMessage.textContent = `Could not connect to the API. Please ensure the backend is running. Details: ${err.message}`;
+                loading.classList.add('hidden');
+                error.classList.remove('hidden');
+            } finally {
+                // UI State: Reset Button
+                searchButton.disabled = false;
+                searchButton.classList.remove('opacity-50', 'cursor-not-allowed');
+            }
+        }
+
+        function displayResults(investigators) {
+            loading.classList.add('hidden');
+            resultsList.innerHTML = ''; 
+
+            if (!investigators || investigators.length === 0) {
+                resultsList.innerHTML = `<div class="text-center py-10 bg-white rounded-lg shadow-md"><h3 class="text-lg font-semibold">No Investigators Found</h3><p class="text-slate-500">Try a broader search term.</p></div>`;
+                resultsList.classList.remove('hidden');
+                return;
+            }
+
+            investigators.forEach((pi, index) => {
+                const card = document.createElement('div');
+                card.className = 'bg-white p-5 rounded-xl shadow-md flex flex-col sm:flex-row items-start gap-4 fade-in';
+                card.innerHTML = `
+                    <div class="text-3xl font-bold text-slate-300 w-12 text-center shrink-0">#${index + 1}</div>
+                    <div class="flex-grow">
+                        <div class="flex items-center justify-between">
+                            <h3 class="text-lg font-bold text-slate-800">${pi.name}</h3>
+                            <button data-pi-id="${pi.investigatorId}" class="details-button text-slate-400 hover:text-blue-600 transition-colors">
+                                <i data-lucide="info" class="w-5 h-5"></i>
+                            </button>
+                        </div>
+                        <p class="text-sm text-slate-500">${pi.affiliation || 'Affiliation not found'}</p>
+                    </div>
+                    <div class="w-full sm:w-64 grid grid-cols-3 gap-2 text-center shrink-0">
+                        ${createScoreCard('Overall', pi.scores.overall, 'bg-blue-100 text-blue-700')}
+                        ${createScoreCard('Scholar', pi.scores.scholar, 'bg-green-100 text-green-700')}
+                        ${createScoreCard('Operator', pi.scores.operator, 'bg-purple-100 text-purple-700')}
+                    </div>
+                `;
+                resultsList.appendChild(card);
+            });
+            
+            // Add event listeners to the new details buttons
+            document.querySelectorAll('.details-button').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    const piId = e.currentTarget.dataset.piId;
+                    const investigator = currentInvestigators.find(p => p.investigatorId === piId);
+                    if (investigator) {
+                        showDetailsModal(investigator);
+                    }
+                });
+            });
+
+            resultsList.classList.remove('hidden');
+            lucide.createIcons();
+        }
+
+        function createScoreCard(label, score, colorClasses) {
+            return `<div class="p-2 rounded-lg ${colorClasses}"><div class="text-xs font-semibold uppercase tracking-wider">${label}</div><div class="text-2xl font-bold">${score}</div></div>`;
+        }
+
+        function showDetailsModal(pi) {
+            modalTitle.textContent = `Details for ${pi.name}`;
+            // NOTE: This assumes the backend API will be updated to return publicationCount and trialCount.
+            const pubCount = pi.publicationCount !== undefined ? pi.publicationCount : 'N/A';
+            const trialCount = pi.trialCount !== undefined ? pi.trialCount : 'N/A';
+            
+            modalContent.innerHTML = `
+                <p class="mb-2">This investigator's scores were calculated based on the following data found by our engine:</p>
+                <ul class="list-disc list-inside space-y-2">
+                    <li><strong>Publications Found:</strong> ${pubCount}</li>
+                    <li><strong>Clinical Trials Found:</strong> ${trialCount}</li>
+                </ul>
+                <p class="mt-4 text-sm text-slate-500">A score of 0 may indicate that our engine could not find verifiable data for this category under our strict matching criteria.</p>
+            `;
+            modal.classList.remove('hidden');
+            requestAnimationFrame(() => {
+                modal.classList.add('opacity-100');
+                modal.querySelector('.modal-container').classList.add('scale-100');
+            });
+        }
+
+        function hideDetailsModal() {
+            modal.classList.add('opacity-0');
+            modal.querySelector('.modal-container').classList.remove('scale-100');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                modal.classList.remove('opacity-0'); // Reset for next time
+            }, 300);
+        }
+
+        // --- INITIALIZATION ---
+        lucide.createIcons();
+
+    </script>
+</body>
+</html>

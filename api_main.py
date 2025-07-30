@@ -24,10 +24,15 @@ app = FastAPI(
 # Allows the frontend (running on a different domain) to communicate with this API
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allows all origins
+    allow_origins=[
+        "http://localhost:3000",
+        "http://127.0.0.1:3000", 
+        "https://project-catalyst.netlify.app",
+        "https://*.netlify.app"
+    ],
     allow_credentials=True,
-    allow_methods=["*"],  # Allows all methods
-    allow_headers=["*"],  # Allows all headers
+    allow_methods=["GET", "POST"],
+    allow_headers=["*"],
 )
 
 # --- CONFIGURATION & DATA SCHEMAS (from previous steps) ---

@@ -1,0 +1,22 @@
+[build]
+  publish = "."
+  command = "echo 'Static site ready for deployment'"
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-XSS-Protection = "1; mode=block"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+
+[[redirects]]
+  from = "/api/*"
+  to = "https://project-catalyst-api.onrender.com/:splat"
+  status = 200
+  force = true
+
+[dev]
+  command = "python -m http.server 3000"
+  port = 3000
+  publish = "."

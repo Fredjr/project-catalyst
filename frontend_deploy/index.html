@@ -117,10 +117,15 @@
 
     <script>
         // --- CONFIGURATION ---
-        // API URL - automatically detects environment
-        const API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
-            ? "http://127.0.0.1:8002/find-investigators/" 
-            : "https://project-catalyst-api.onrender.com/find-investigators/";
+        // API URL - using CORS proxy for production
+        const IS_LOCAL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        const PROD_API_BASE = 'https://project-catalyst-api.onrender.com';
+        const PROD_API_ENDPOINT = `${PROD_API_BASE}/find-investigators/`;
+        
+        // Use local URL for development, CORS proxy for production
+        const API_URL = IS_LOCAL
+            ? 'http://127.0.0.1:8002/find-investigators/'
+            : `https://corsproxy.io/?${encodeURIComponent(PROD_API_ENDPOINT)}`;
 
         // --- DOM ELEMENTS ---
         const searchQueryInput = document.getElementById('search-query');
@@ -168,7 +173,14 @@
             try {
                 const response = await fetch(API_URL, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'x-cors-api-key': 'temp_f3c2a8f9c9a87dd9bb7f1fd31bf88641',  // Free tier API key for testing
+                        'Origin': window.location.origin
+                    },
+                    mode: 'cors',
+                    credentials: 'omit',
                     body: JSON.stringify({ query: query }),
                 });
 
